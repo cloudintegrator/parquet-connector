@@ -29,6 +29,8 @@ import org.mule.runtime.extension.api.annotation.param.Optional;
 import org.mule.runtime.extension.api.annotation.param.display.DisplayName;
 import org.mule.runtime.extension.api.runtime.process.CompletionCallback;
 import org.mule.runtime.http.api.client.HttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -42,6 +44,8 @@ import static org.mule.runtime.api.meta.model.display.PathModel.Location.EXTERNA
 import static org.mule.runtime.api.meta.model.display.PathModel.Type.FILE;
 
 public class ParquetOperations {
+    private final Logger LOGGER = LoggerFactory.getLogger(ParquetOperations.class);
+
     @MediaType(value = MediaType.APPLICATION_JSON, strict = false)
     @DisplayName("Read Parquet - File")
     public String readParquet(@DisplayName("Parquet File Location") @org.mule.runtime.extension.api.annotation.param.display.Path(type = FILE, location = EXTERNAL) String parquetFilePath) {
@@ -64,9 +68,9 @@ public class ParquetOperations {
             }
 
         } catch (IllegalArgumentException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage());
         }
         return array.toString();
     }
@@ -97,9 +101,9 @@ public class ParquetOperations {
             }
 
         } catch (IllegalArgumentException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage());
         }
         return records.toString();
     }
@@ -136,14 +140,15 @@ public class ParquetOperations {
                 records = new ArrayList<>();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage());
         }
         System.out.println("Total: " + total);
+        LOGGER.info("Total records processed: " + total);
         return "Total records processed: " + total;
     }
 
     public void sendDataToMQ(ParquetConnection connection, String url, String postData) {
-        connection.callHttp(url);
+        connection.callHttp(url, postData);
     }
 
     private GenericRecord deserialize(Schema schema, byte[] data) throws IOException {
