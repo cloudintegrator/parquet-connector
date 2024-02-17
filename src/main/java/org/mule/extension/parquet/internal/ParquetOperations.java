@@ -44,6 +44,8 @@ import org.apache.avro.io.BinaryEncoder;
 
 import org.apache.avro.io.DatumReader;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.Instant;
 
 import org.apache.avro.LogicalType;
@@ -168,75 +170,8 @@ public class ParquetOperations {
         return array.toString();
     }
 
-    @MediaType(value = MediaType.APPLICATION_JSON, strict = false)
-    @DisplayName("Get Parquet Schema - Stream")
-    public String getParquetSchema(@Optional(defaultValue = PAYLOAD) InputStream body) {
 
-        String item = null;
-        String schema = null;
 
-        Configuration conf = new Configuration();
-        conf.setBoolean(org.apache.parquet.avro.AvroReadSupport.READ_INT96_AS_FIXED, true);
-
-        try {
-            ParquetBufferedReader inputFile = new ParquetBufferedReader(item, body);
-            ParquetReader<GenericRecord> r = AvroParquetReader.<GenericRecord>builder(inputFile)
-                    .disableCompatibility()
-                    .withConf(conf)
-                    .build();
-            GenericRecord firstRecord = r.read();
-            if (firstRecord == null) {
-                throw new IOException("Can't process empty Parquet file");
-            }
-            schema = firstRecord.getSchema().toString(true);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return schema;
-    }
-
-    @MediaType(value = MediaType.APPLICATION_JSON, strict = false)
-    @DisplayName("Read Parquet - Stream")
-    public String readParquetStream(@Optional(defaultValue = PAYLOAD) InputStream body) {
-
-        String item = null;
-        //OutputStream outputStream = new ByteArrayOutputStream(1024);
-        List<String> records = new ArrayList<>();
-
-        try {
-            ParquetBufferedReader inputFile = new ParquetBufferedReader(item, body);
-
-            Configuration conf = new Configuration();
-            conf.setBoolean(org.apache.parquet.avro.AvroReadSupport.READ_INT96_AS_FIXED, true);
-
-            ParquetReader<GenericRecord> r = AvroParquetReader.<GenericRecord>builder(inputFile)
-                    .disableCompatibility()
-                    .withConf(conf)
-                    .build();
-            GenericRecord record;
-            //JsonEncoder encoder = null;
-
-            while ((record = r.read()) != null) {
-                //DatumWriter<GenericRecord> writer = new GenericDatumWriter<>(record.getSchema());
-                //encoder = EncoderFactory.get().jsonEncoder(record.getSchema(), outputStream);
-                //encoder.setIncludeNamespace(false);
-
-                String jsonRecord = deserialize(record.getSchema(), toByteArray(record.getSchema(), record)).toString();
-                jsonRecord = ParquetTimestampUtils.convertInt96(jsonRecord);
-                records.add(jsonRecord);
-
-                //writer.write(record, encoder);
-                //encoder.flush();
-            }
-
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return records.toString();
-    }
 
     @MediaType(value = MediaType.APPLICATION_JSON, strict = false)
     @DisplayName("Read Paged File - Stream")
@@ -264,7 +199,6 @@ public class ParquetOperations {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        //System.out.println(records.toString());
         return records.toString();
     }
 
@@ -288,19 +222,53 @@ public class ParquetOperations {
                     records.add(jsonRecord);
                     countSize = countSize + 1;
                 } else {
-                    // Send to AMQ. TODO
-                    System.out.println(records.toString());
+                    // Send to AMQ
+                    sendDataToMQ(record.toString());
                     countSize = 0;
                     records = new ArrayList<>();
                 }
                 total = total + 1;
-
             }
-            System.out.println("Total records processed: " + total);
+            if (!records.isEmpty()) {
+                sendDataToMQ(records.toString());
+                countSize = 0;
+                records = new ArrayList<>();
+            }
+            System.out.println("Total: " + total);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
+    }
+
+    public void sendDataToMQ(String postData) {
+        try {
+            String url = "http://localhost:8081/data";
+            URL apiUrl = new URL(url);
+            HttpURLConnection conn = (HttpURLConnection) apiUrl.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = postData.getBytes("utf-8");
+                os.write(input, 0, input.length);
+            }
+
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+                StringBuilder response = new StringBuilder();
+                String responseLine = null;
+                while ((responseLine = br.readLine()) != null) {
+                    response.append(responseLine.trim());
+                }
+                System.out.println(response.toString());
+            }
+
+            conn.disconnect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private GenericRecord deserialize(Schema schema, byte[] data) throws IOException {
