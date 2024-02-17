@@ -268,6 +268,41 @@ public class ParquetOperations {
         return records.toString();
     }
 
+    @MediaType(value = MediaType.APPLICATION_JSON, strict = false)
+    @DisplayName("Send To MQ - Stream")
+    public void readAndSendToMQ(long fetchSize, InputStream body) {
+        List<String> records = new ArrayList<>();
+        try {
+            ParquetBufferedReader inputFile = new ParquetBufferedReader(null, body);
+            Configuration conf = new Configuration();
+            conf.setBoolean(org.apache.parquet.avro.AvroReadSupport.READ_INT96_AS_FIXED, true);
+
+            ParquetReader<GenericRecord> r = AvroParquetReader.<GenericRecord>builder(inputFile).disableCompatibility().withConf(conf).build();
+            GenericRecord record = null;
+
+            long countSize = 0;
+            long total = 0;
+            while ((record = r.read()) != null) {
+                if (countSize < fetchSize) {
+                    String jsonRecord = deserialize(record.getSchema(), toByteArray(record.getSchema(), record)).toString();
+                    records.add(jsonRecord);
+                    countSize = countSize + 1;
+                } else {
+                    // Send to AMQ. TODO
+                    System.out.println(records.toString());
+                    countSize = 0;
+                    records = new ArrayList<>();
+                }
+                total = total + 1;
+
+            }
+            System.out.println("Total records processed: " + total);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
     private GenericRecord deserialize(Schema schema, byte[] data) throws IOException {
         GenericData.get().addLogicalTypeConversion(new TimestampMillisConversion());
         InputStream is = new ByteArrayInputStream(data);
