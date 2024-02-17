@@ -12,6 +12,17 @@ public class ParquetConfiguration {
     @Parameter
     private String targetUrl;
 
+    public int getTimeout() {
+        return timeout;
+    }
+
+    public void setTimeout(int timeout) {
+        this.timeout = timeout;
+    }
+
+    @Parameter
+    private int timeout;
+
     public String getTargetUrl() {
         return targetUrl;
     }

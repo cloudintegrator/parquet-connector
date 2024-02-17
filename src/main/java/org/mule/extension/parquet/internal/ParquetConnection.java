@@ -32,7 +32,7 @@ public final class ParquetConnection {
         this.httpClient.stop();
     }
 
-    public InputStream callHttp(String url, String data) {
+    public void callHttp(String url, String data, int timeout) {
         HttpResponse httpResponse = null;
         ByteArrayHttpEntity entity = new ByteArrayHttpEntity(data.getBytes(StandardCharsets.UTF_8));
         HttpRequest request = this.httpRequestBuilder
@@ -42,11 +42,10 @@ public final class ParquetConnection {
                 .build();
 
         try {
-            httpResponse = this.httpClient.send(request, 1000, false, null);
-            return httpResponse.getEntity().getContent();
+            httpResponse = this.httpClient.send(request, timeout, false, null);
+            LOGGER.info("Sent to Http endpoint with status code " + httpResponse.getStatusCode());
         } catch (Exception e) {
             LOGGER.error(e.getMessage());
         }
-        return null;
     }
 }

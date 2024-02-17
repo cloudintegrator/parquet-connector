@@ -25,10 +25,7 @@ import org.mule.extension.parquet.internal.int96.ParquetTimestampUtils;
 import org.mule.runtime.extension.api.annotation.param.Config;
 import org.mule.runtime.extension.api.annotation.param.Connection;
 import org.mule.runtime.extension.api.annotation.param.MediaType;
-import org.mule.runtime.extension.api.annotation.param.Optional;
 import org.mule.runtime.extension.api.annotation.param.display.DisplayName;
-import org.mule.runtime.extension.api.runtime.process.CompletionCallback;
-import org.mule.runtime.http.api.client.HttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,8 +106,8 @@ public class ParquetOperations {
     }
 
     @MediaType(value = MediaType.ANY, strict = false)
-    @DisplayName("Send To MQ - Stream")
-    public String readAndSendToMQ(@Connection ParquetConnection connection, @Config ParquetConfiguration config, long fetchSize, InputStream body) {
+    @DisplayName("Batch by Batch - Stream")
+    public String readAndSendToHttp(@Connection ParquetConnection connection, @Config ParquetConfiguration config, long fetchSize, InputStream body) {
         List<String> records = new ArrayList<>();
         long total = 0;
         try {
@@ -128,14 +125,14 @@ public class ParquetOperations {
                     records.add(jsonRecord);
                     count = count + 1;
                 } else {
-                    sendDataToMQ(connection, config.getTargetUrl(), record.toString());
+                    sendDataToHttp(connection, config, record.toString());
                     count = 0;
                     records = new ArrayList<>();
                 }
                 total = total + 1;
             }
             if (!records.isEmpty()) {
-                sendDataToMQ(connection, config.getTargetUrl(), records.toString());
+                sendDataToHttp(connection, config, records.toString());
                 count = 0;
                 records = new ArrayList<>();
             }
@@ -147,8 +144,8 @@ public class ParquetOperations {
         return "Total records processed: " + total;
     }
 
-    public void sendDataToMQ(ParquetConnection connection, String url, String postData) {
-        connection.callHttp(url, postData);
+    public void sendDataToHttp(ParquetConnection connection, ParquetConfiguration configuration, String postData) {
+        connection.callHttp(configuration.getTargetUrl(), postData, configuration.getTimeout());
     }
 
     private GenericRecord deserialize(Schema schema, byte[] data) throws IOException {
