@@ -37,6 +37,7 @@ public final class ParquetConnection {
         ByteArrayHttpEntity entity = new ByteArrayHttpEntity(data.getBytes(StandardCharsets.UTF_8));
         HttpRequest request = this.httpRequestBuilder
                 .method(HttpConstants.Method.POST)
+                .addHeader("Content-Type","application/json")
                 .entity(entity)
                 .uri(url)
                 .build();

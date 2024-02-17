@@ -144,7 +144,7 @@ public class ParquetOperations {
         return "Total records processed: " + total;
     }
 
-    public void sendDataToHttp(ParquetConnection connection, ParquetConfiguration configuration, String postData) {
+    private void sendDataToHttp(ParquetConnection connection, ParquetConfiguration configuration, String postData) {
         connection.callHttp(configuration.getTargetUrl(), postData, configuration.getTimeout());
     }
 
