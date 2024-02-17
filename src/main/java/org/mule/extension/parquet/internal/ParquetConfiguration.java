@@ -8,10 +8,15 @@ import org.mule.runtime.extension.api.annotation.param.Parameter;
 @ConnectionProviders(ParquetConnectionProvider.class)
 public class ParquetConfiguration {
 
-  @Parameter
-  private String configId;
 
-  public String getConfigId(){
-    return configId;
-  }
+    @Parameter
+    private String targetUrl;
+
+    public String getTargetUrl() {
+        return targetUrl;
+    }
+
+    public void setTargetUrl(String targetUrl) {
+        this.targetUrl = targetUrl;
+    }
 }

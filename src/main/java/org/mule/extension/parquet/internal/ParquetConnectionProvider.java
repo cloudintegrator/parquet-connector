@@ -9,43 +9,35 @@ import org.mule.runtime.api.connection.ConnectionProvider;
 import org.mule.runtime.api.connection.CachedConnectionProvider;
 import org.mule.runtime.extension.api.annotation.param.display.DisplayName;
 
+import org.mule.runtime.http.api.HttpService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
+
 public class ParquetConnectionProvider implements PoolingConnectionProvider<ParquetConnection> {
 
-  private final Logger LOGGER = LoggerFactory.getLogger(ParquetConnectionProvider.class);
+    private final Logger LOGGER = LoggerFactory.getLogger(ParquetConnectionProvider.class);
 
- /**
-  * A parameter that is always required to be configured.
-  */
-  @Parameter
-  private String requiredParameter;
+    @Inject
+    private HttpService httpService;
 
- /**
-  * A parameter that is not required to be configured by the user.
-  */
-  @DisplayName("Friendly Name")
-  @Parameter
-  @Optional(defaultValue = "100")
-  private int optionalParameter;
-
-  @Override
-  public ParquetConnection connect() throws ConnectionException {
-    return new ParquetConnection(requiredParameter + ":" + optionalParameter);
-  }
-
-  @Override
-  public void disconnect(ParquetConnection connection) {
-    try {
-      connection.invalidate();
-    } catch (Exception e) {
-      LOGGER.error("Error while disconnecting [" + connection.getId() + "]: " + e.getMessage(), e);
+    @Override
+    public ParquetConnection connect() throws ConnectionException {
+        return new ParquetConnection(this.httpService);
     }
-  }
 
-  @Override
-  public ConnectionValidationResult validate(ParquetConnection connection) {
-    return ConnectionValidationResult.success();
-  }
+    @Override
+    public void disconnect(ParquetConnection connection) {
+        try {
+            connection.invalidate();
+        } catch (Exception e) {
+            LOGGER.error("Error while disconnecting []");
+        }
+    }
+
+    @Override
+    public ConnectionValidationResult validate(ParquetConnection connection) {
+        return ConnectionValidationResult.success();
+    }
 }
