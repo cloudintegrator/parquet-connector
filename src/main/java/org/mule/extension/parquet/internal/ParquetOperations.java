@@ -108,7 +108,7 @@ public class ParquetOperations {
     @MediaType(value = MediaType.ANY, strict = false)
     @DisplayName("Batch by Batch - Stream")
     public String readAndSendToHttp(@Connection ParquetConnection connection, @Config ParquetConfiguration config, long fetchSize, InputStream body) {
-        List<String> records = new ArrayList<>();
+        List<String> recordList = new ArrayList<>();
         long total = 0;
         try {
             ParquetBufferedReader inputFile = new ParquetBufferedReader(null, body);
@@ -122,26 +122,26 @@ public class ParquetOperations {
             while ((record = r.read()) != null) {
                 if (count < fetchSize) {
                     String jsonRecord = deserialize(record.getSchema(), toByteArray(record.getSchema(), record)).toString();
-                    records.add(jsonRecord);
+                    recordList.add(jsonRecord);
                     count = count + 1;
                 } else {
-                    sendDataToHttp(connection, config, record.toString());
+                    sendDataToHttp(connection, config, recordList.toString());
                     count = 0;
-                    records = new ArrayList<>();
+                    recordList = new ArrayList<>();
                 }
                 total = total + 1;
             }
-            if (!records.isEmpty()) {
-                sendDataToHttp(connection, config, records.toString());
+            if (!recordList.isEmpty()) {
+                sendDataToHttp(connection, config, recordList.toString());
                 count = 0;
-                records = new ArrayList<>();
+                recordList = new ArrayList<>();
             }
         } catch (Exception e) {
             LOGGER.error(e.getMessage());
         }
         System.out.println("Total: " + total);
-        LOGGER.info("Total records processed: " + total);
-        return "Total records processed: " + total;
+        LOGGER.info("Total recordList processed: " + total);
+        return "Total recordList processed: " + total;
     }
 
     private void sendDataToHttp(ParquetConnection connection, ParquetConfiguration configuration, String postData) {
