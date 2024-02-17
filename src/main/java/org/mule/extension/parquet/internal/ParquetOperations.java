@@ -236,6 +236,34 @@ public class ParquetOperations {
 		return records.toString();
 	}
 
+	@MediaType(value = MediaType.APPLICATION_JSON, strict = false)
+	@DisplayName("Read Paged File - Stream")
+	public  String readPagedFile(int pagedRecords, InputStream body) {
+		List<String> records = new ArrayList<>();
+		try {
+			ParquetBufferedReader inputFile = new ParquetBufferedReader(null, body);
+			Configuration conf = new Configuration();
+			conf.setBoolean(org.apache.parquet.avro.AvroReadSupport.READ_INT96_AS_FIXED, true);
+
+			ParquetReader<GenericRecord> r = AvroParquetReader.<GenericRecord>builder(inputFile).disableCompatibility()
+					.withConf(conf).build();
+			GenericRecord record;
+
+			int counter = 0;
+			while ((record = r.read()) != null & counter <= pagedRecords) {
+				String jsonRecord = deserialize(record.getSchema(), toByteArray(record.getSchema(), record)).toString();
+				jsonRecord = ParquetTimestampUtils.convertInt96(jsonRecord);
+				records.add(jsonRecord);
+
+				counter = counter + 1;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		//System.out.println(records.toString());
+		return records.toString();
+	}
+
 	private GenericRecord deserialize(Schema schema, byte[] data) throws IOException {
 		GenericData.get().addLogicalTypeConversion(new TimestampMillisConversion());
 		InputStream is = new ByteArrayInputStream(data);
